@@ -31,19 +31,25 @@ class Conversations(APIView):
                 .all()
             )
 
-            conversations_response = []
 
+            conversations_response = []
             for convo in conversations:
                 convo_dict = {
                     "id": convo.id,
                     "messages": [
                         message.to_dict(["id", "text", "senderId", "createdAt"])
                         for message in convo.messages.all()
-                    ],
+                    ]
                 }
 
                 # set properties for notification count and latest message preview
                 convo_dict["latestMessageText"] = convo_dict["messages"][-1]["text"]
+                if convo.user1.id == user_id:
+                    convo_dict["qtyUnread"] = convo.user1QtyUnread
+                    print(convo_dict["qtyUnread"])
+                else:
+                    convo_dict["qtyUnread"] = convo.user2QtyUnread
+                    print(convo_dict["qtyUnread"])
 
                 # set a property "otherUser" so that frontend will have easier access
                 user_fields = ["id", "username", "photoUrl"]
@@ -69,3 +75,18 @@ class Conversations(APIView):
             )
         except Exception as e:
             return HttpResponse(status=500)
+
+class QtyUnreadReset(APIView):
+    def post(self, request: Request):
+        conversation_id=request.GET.get('conversation', '')
+        user_id = get_user(request).id
+        conversation = Conversation.objects.filter(id=conversation_id).first()
+        
+        if user_id == conversation.user1.id:
+            conversation.user1QtyUnread = 0
+        else:
+            conversation.user2QtyUnread = 0
+        conversation.save()
+
+            
+        return HttpResponse(status=200)
