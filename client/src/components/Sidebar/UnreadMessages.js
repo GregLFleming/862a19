@@ -4,7 +4,8 @@ import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles(() => ({
   unreadMessages: {
-    backgroundColor: "#3F92FF"
+    backgroundColor: "#3F92FF",
+    right: 40
   },
 }));
 
