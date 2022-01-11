@@ -27,8 +27,11 @@ const Chat = (props) => {
 
   const handleClick = async (conversation) => {
     // reset the unread message counter to 0.
-    await qtyUnreadReset(conversation.id);
-    await fetchConversations();
+    if (conversation.id)
+    {
+      await qtyUnreadReset(conversation.id);
+      await fetchConversations();
+    }
     await props.setActiveChat(conversation.otherUser.username);
   };
 
