@@ -86,36 +86,13 @@ class QtyUnreadReset(APIView):
             user_id = get_user(request).id
             conversation = Conversation.objects.filter(id=conversation_id).prefetch_related(
                     Prefetch(
-                        "messages", queryset=Message.objects.order_by("createdAt")
+                        "messages", queryset=Message.objects.order_by("-createdAt").exclude(senderId=user_id)
                     )
                 ).first()
+
             #If user is not a member of the conversation, return an error reponse.
             if user_id not in [conversation.user1.id, conversation.user2.id]:
                 return HttpResponse(status=401)
-
-            #remove the lastRead marker from the previous lastRead message
-            for message in reversed(conversation.messages.all()):
-                if user_id != message.senderId:
-                    if message.lastRead == True:
-                        message.lastRead = False
-                        message.save()
-                        break
-            
-            #Add a lastRead marker to the final message sent by the other user
-            for message in reversed(conversation.messages.all()):
-                if user_id != message.senderId:
-                    if message.lastRead == False:
-                        message.lastRead = True
-                        message.save()
-                        break
-
-            #Set each message's read status to True.
-            for message in reversed(conversation.messages.all()):
-                if user_id != message.senderId:
-                    if message.read == True:
-                        break
-                    message.read = True
-                    message.save()
 
             #reset the unread message counter in conversation object.
             if user_id == conversation.user1.id:
@@ -123,6 +100,21 @@ class QtyUnreadReset(APIView):
             else:
                 conversation.user2QtyUnread = 0
             conversation.save()
+
+            #Set each message's read status to True. Remove lastRead marker.
+            if conversation.messages.all():
+                for message in conversation.messages.all():
+                    if message.read == True:
+                        message.lastRead = False
+                        message.save()
+                        break
+                    message.read = True
+                    message.save()
+                
+                #Add a lastRead marker to the final message sent by the other user
+                message = conversation.messages.first()
+                message.lastRead = True
+                message.save()
 
             return HttpResponse(status=200)
         except Exception as e:
