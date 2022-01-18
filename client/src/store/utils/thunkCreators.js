@@ -121,7 +121,7 @@ export const searchUsers = (searchTerm) => async (dispatch) => {
 //Make call to reset message read counter
 export const qtyUnreadReset = (conversation) => async (dispatch) => {
   try {
-    await axios.post(`/api/qtyUnreadReset`, null, {
+    await axios.put(`/api/qtyUnreadReset`, null, {
       params: {
          conversation
       }

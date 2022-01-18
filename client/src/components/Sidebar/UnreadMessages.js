@@ -5,7 +5,7 @@ import { makeStyles } from "@material-ui/core/styles";
 const useStyles = makeStyles(() => ({
   unreadMessages: {
     backgroundColor: "#3F92FF",
-    right: 40
+    right: 20
   },
 }));
 
@@ -16,7 +16,6 @@ const UnreadMessages = (props) => {
     <Box>
       <Badge
         badgeContent = { qty }
-        max = {99}
         color="primary"
         classes={{ badge: `${classes.unreadMessages}` }}
         >

@@ -37,7 +37,7 @@ class Conversations(APIView):
                 convo_dict = {
                     "id": convo.id,
                     "messages": [
-                        message.to_dict(["id", "text", "senderId", "createdAt"])
+                        message.to_dict(["id", "text", "senderId", "createdAt", "lastRead"])
                         for message in convo.messages.all()
                     ]
                 }
@@ -75,16 +75,55 @@ class Conversations(APIView):
             return HttpResponse(status=500)
 
 class QtyUnreadReset(APIView):
-    def post(self, request: Request):
-        conversation_id=request.GET.get('conversation', '')
-        user_id = get_user(request).id
-        conversation = Conversation.objects.filter(id=conversation_id).first()
-        
-        if user_id == conversation.user1.id:
-            conversation.user1QtyUnread = 0
-        else:
-            conversation.user2QtyUnread = 0
-        conversation.save()
-
+    def put(self, request: Request):
+        #Verify user authorization
+        try:
+            user = get_user(request)
+            if user.is_anonymous:
+                return HttpResponse(status=401)
             
-        return HttpResponse(status=200)
+            conversation_id=request.GET.get('conversation', '')
+            user_id = get_user(request).id
+            conversation = Conversation.objects.filter(id=conversation_id).prefetch_related(
+                    Prefetch(
+                        "messages", queryset=Message.objects.order_by("createdAt")
+                    )
+                ).first()
+            #If user is not a member of the conversation, return an error reponse.
+            if user_id not in [conversation.user1.id, conversation.user2.id]:
+                return HttpResponse(status=401)
+
+            #remove the lastRead marker from the previous lastRead message
+            for message in reversed(conversation.messages.all()):
+                if user_id != message.senderId:
+                    if message.lastRead == True:
+                        message.lastRead = False
+                        message.save()
+                        break
+            
+            #Add a lastRead marker to the final message sent by the other user
+            for message in reversed(conversation.messages.all()):
+                if user_id != message.senderId:
+                    if message.lastRead == False:
+                        message.lastRead = True
+                        message.save()
+                        break
+
+            #Set each message's read status to True.
+            for message in reversed(conversation.messages.all()):
+                if user_id != message.senderId:
+                    if message.read == True:
+                        break
+                    message.read = True
+                    message.save()
+
+            #reset the unread message counter in conversation object.
+            if user_id == conversation.user1.id:
+                conversation.user1QtyUnread = 0
+            else:
+                conversation.user2QtyUnread = 0
+            conversation.save()
+
+            return HttpResponse(status=200)
+        except Exception as e:
+            return HttpResponse(status=500)
