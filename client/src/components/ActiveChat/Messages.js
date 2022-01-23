@@ -5,7 +5,6 @@ import moment from "moment";
 
 const Messages = (props) => {
   const { messages, otherUser, userId} = props;
-  // window.alert(Object.getOwnPropertyNames(messages[0]));
   return (
     <Box>
       {messages.map((message) => {

@@ -46,7 +46,6 @@ const SenderBubble = (props) => {
       {lastRead && 
         <Avatar alt={otherUser.username} src={otherUser.photoUrl} className={classes.avatar}></Avatar> 
       }
-      {lastRead}
     </Box>
   );
 };

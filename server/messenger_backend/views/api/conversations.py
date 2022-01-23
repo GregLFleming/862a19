@@ -101,15 +101,11 @@ class QtyUnreadReset(APIView):
                 conversation.user2QtyUnread = 0
             conversation.save()
 
-            #Set each message's read status to True. Remove lastRead marker.
+           
             if conversation.messages.all():
-                for message in conversation.messages.all():
-                    if message.read == True:
-                        message.lastRead = False
-                        message.save()
-                        break
-                    message.read = True
-                    message.save()
+                #Set each message's read status to True. Remove lastRead marker.
+                conversation.messages.filter(read=False).update(read=True)
+                conversation.messages.filter(lastRead=True).update(lastRead=False)
                 
                 #Add a lastRead marker to the final message sent by the other user
                 message = conversation.messages.first()
