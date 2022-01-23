@@ -31,19 +31,23 @@ class Conversations(APIView):
                 .all()
             )
 
-            conversations_response = []
 
+            conversations_response = []
             for convo in conversations:
                 convo_dict = {
                     "id": convo.id,
                     "messages": [
-                        message.to_dict(["id", "text", "senderId", "createdAt"])
+                        message.to_dict(["id", "text", "senderId", "createdAt", "lastRead"])
                         for message in convo.messages.all()
-                    ],
+                    ]
                 }
 
                 # set properties for notification count and latest message preview
                 convo_dict["latestMessageText"] = convo_dict["messages"][-1]["text"]
+                if convo.user1.id == user_id:
+                    convo_dict["qtyUnread"] = convo.user1QtyUnread
+                else:
+                    convo_dict["qtyUnread"] = convo.user2QtyUnread
 
                 # set a property "otherUser" so that frontend will have easier access
                 user_fields = ["id", "username", "photoUrl"]
@@ -67,5 +71,47 @@ class Conversations(APIView):
                 conversations_response,
                 safe=False,
             )
+        except Exception as e:
+            return HttpResponse(status=500)
+
+class QtyUnreadReset(APIView):
+    def put(self, request: Request):
+        #Verify user authorization
+        try:
+            user = get_user(request)
+            if user.is_anonymous:
+                return HttpResponse(status=401)
+            
+            conversation_id=request.GET.get('conversation', '')
+            user_id = get_user(request).id
+            conversation = Conversation.objects.filter(id=conversation_id).prefetch_related(
+                    Prefetch(
+                        "messages", queryset=Message.objects.order_by("-createdAt").exclude(senderId=user_id)
+                    )
+                ).first()
+
+            #If user is not a member of the conversation, return an error reponse.
+            if user_id not in [conversation.user1.id, conversation.user2.id]:
+                return HttpResponse(status=401)
+
+            #reset the unread message counter in conversation object.
+            if user_id == conversation.user1.id:
+                conversation.user1QtyUnread = 0
+            else:
+                conversation.user2QtyUnread = 0
+            conversation.save()
+
+           
+            if conversation.messages.all():
+                #Set each message's read status to True. Remove lastRead marker.
+                conversation.messages.filter(read=False).update(read=True)
+                conversation.messages.filter(lastRead=True).update(lastRead=False)
+                
+                #Add a lastRead marker to the final message sent by the other user
+                message = conversation.messages.first()
+                message.lastRead = True
+                message.save()
+
+            return HttpResponse(status=200)
         except Exception as e:
             return HttpResponse(status=500)

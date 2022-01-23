@@ -117,3 +117,16 @@ export const searchUsers = (searchTerm) => async (dispatch) => {
     console.error(error);
   }
 };
+
+//Make call to reset message read counter
+export const qtyUnreadReset = (conversation) => async (dispatch) => {
+  try {
+    await axios.put(`/api/qtyUnreadReset`, null, {
+      params: {
+         conversation
+      }
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};

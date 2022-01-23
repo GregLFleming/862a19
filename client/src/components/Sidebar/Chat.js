@@ -1,9 +1,10 @@
 import React from "react";
 import { Box } from "@material-ui/core";
-import { BadgeAvatar, ChatContent } from "../Sidebar";
+import { BadgeAvatar, ChatContent, UnreadMessages } from "../Sidebar";
 import { makeStyles } from "@material-ui/core/styles";
 import { setActiveChat } from "../../store/activeConversation";
 import { connect } from "react-redux";
+import { qtyUnreadReset, fetchConversations} from "../../store/utils/thunkCreators";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -21,10 +22,16 @@ const useStyles = makeStyles((theme) => ({
 
 const Chat = (props) => {
   const classes = useStyles();
-  const { conversation } = props;
+  const { conversation, qtyUnreadReset, fetchConversations } = props;
   const { otherUser } = conversation;
 
   const handleClick = async (conversation) => {
+    // reset the unread message counter to 0.
+    if (conversation.id)
+    {
+      await qtyUnreadReset(conversation.id);
+      await fetchConversations();
+    }
     await props.setActiveChat(conversation.otherUser.username);
   };
 
@@ -37,6 +44,7 @@ const Chat = (props) => {
         sidebar={true}
       />
       <ChatContent conversation={conversation} />
+      <UnreadMessages qty={conversation.qtyUnread}/>
     </Box>
   );
 };
@@ -45,6 +53,12 @@ const mapDispatchToProps = (dispatch) => {
   return {
     setActiveChat: (id) => {
       dispatch(setActiveChat(id));
+    },
+    qtyUnreadReset: (conversation) => {
+      dispatch(qtyUnreadReset(conversation));
+    },
+    fetchConversations: () => {
+      dispatch(fetchConversations());
     }
   };
 };
